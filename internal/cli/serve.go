@@ -2,6 +2,7 @@ package cli
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -10,6 +11,16 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/acme/autocert"
 )
+
+func newHandler(dir string) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "version": version})
+	})
+	mux.Handle("/", http.FileServer(http.Dir(dir)))
+	return mux
+}
 
 var (
 	serveDir    string
@@ -34,7 +45,7 @@ var serveCmd = &cobra.Command{
 				listen = ":8080"
 			}
 			log.Printf("serving %s on %s (HTTP, dev mode)", serveDir, listen)
-			return http.ListenAndServe(listen, http.FileServer(http.Dir(serveDir)))
+			return http.ListenAndServe(listen, newHandler(serveDir))
 		}
 
 		m := &autocert.Manager{
@@ -45,7 +56,7 @@ var serveCmd = &cobra.Command{
 
 		srv := &http.Server{
 			Addr:      ":443",
-			Handler:   http.FileServer(http.Dir(serveDir)),
+			Handler:   newHandler(serveDir),
 			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
 		}
 
