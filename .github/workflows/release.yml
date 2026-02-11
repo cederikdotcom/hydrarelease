@@ -87,9 +87,10 @@ jobs:
         ssh -i ~/.ssh/deploy_key "$REMOTE" "mkdir -p ${DEST}/${VERSION}"
         rsync -avz -e "ssh -i ~/.ssh/deploy_key" dist/ "${REMOTE}:${DEST}/${VERSION}/"
 
-        # Upload latest.json
+        # Upload latest.json and update latest symlink
         echo "{\"version\": \"${VERSION#v}\"}" > dist/latest.json
         rsync -avz -e "ssh -i ~/.ssh/deploy_key" dist/latest.json "${REMOTE}:${DEST}/latest.json"
+        ssh -i ~/.ssh/deploy_key "$REMOTE" "cd ${DEST} && ln -sfn ${VERSION} latest"
 
         rm -f ~/.ssh/deploy_key
 
