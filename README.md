@@ -64,7 +64,7 @@ hydrarelease update                    # Download and install latest version
 hydrarelease version                   # Print version
 ```
 
-When running as a service, updates are checked automatically every 6 hours and applied without manual intervention.
+The server checks for updates automatically every 6 hours and applies them without manual intervention, restarting the `hydrarelease` systemd service after each update.
 
 ## Releasing
 
