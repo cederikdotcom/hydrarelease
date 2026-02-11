@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -169,6 +170,38 @@ func (u *Updater) PerformUpdate() error {
 	}
 
 	return nil
+}
+
+// StartAutoCheck runs a background goroutine that periodically checks for
+// updates. If autoApply is true, updates are downloaded and installed
+// automatically, and the systemd service is restarted. If false, it only logs
+// that an update is available.
+func (u *Updater) StartAutoCheck(interval time.Duration, autoApply bool) {
+	go func() {
+		for {
+			time.Sleep(interval)
+
+			info, err := u.CheckForUpdate()
+			if err != nil {
+				log.Printf("[updater] check failed: %v", err)
+				continue
+			}
+
+			if !info.Available {
+				continue
+			}
+
+			if !autoApply {
+				log.Printf("[updater] update available: %s -> %s (run '%s update' to install)", info.CurrentVersion, info.LatestVersion, u.project)
+				continue
+			}
+
+			log.Printf("[updater] updating %s -> %s", info.CurrentVersion, info.LatestVersion)
+			if err := u.PerformUpdate(); err != nil {
+				log.Printf("[updater] auto-update failed: %v", err)
+			}
+		}
+	}()
 }
 
 func downloadFile(url, destPath string) error {
