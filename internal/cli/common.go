@@ -2,7 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/cederikdotcom/hydrarelease/pkg/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +24,66 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update HydraRelease to the latest release",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		u := updater.NewUpdater("hydrarelease", version)
+		u.SetServiceName("hydrarelease")
+
+		fmt.Println("Checking for updates...")
+		info, err := u.CheckForUpdate()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to check for updates: %s\n", err)
+			fmt.Fprintf(os.Stderr, "\nManual download: https://releases.experiencenet.com/hydrarelease/\n")
+			return err
+		}
+
+		fmt.Printf("Current version: %s\n", info.CurrentVersion)
+		fmt.Printf("Latest version:  %s\n", info.LatestVersion)
+
+		if !info.Available {
+			fmt.Println("\nAlready running the latest version!")
+			return nil
+		}
+
+		fmt.Println("\nA new version is available!")
+
+		fmt.Print("\nUpdate now? (yes/no): ")
+		var response string
+		fmt.Scanln(&response)
+
+		if response != "yes" && response != "y" {
+			fmt.Println("Update cancelled.")
+			return nil
+		}
+
+		fmt.Println()
+		return u.PerformUpdate()
+	},
+}
+
+var checkUpdateCmd = &cobra.Command{
+	Use:   "check-update",
+	Short: "Check if a new version is available",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		u := updater.NewUpdater("hydrarelease", version)
+
+		info, err := u.CheckForUpdate()
+		if err != nil {
+			return err
+		}
+
+		if info.Available {
+			fmt.Printf("Update available: %s -> %s\n", info.CurrentVersion, info.LatestVersion)
+			fmt.Println("Run 'hydrarelease update' to install.")
+		} else {
+			fmt.Printf("Already up to date: %s\n", info.CurrentVersion)
+		}
+		return nil
+	},
+}
+
 func init() {
-	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(versionCmd, updateCmd, checkUpdateCmd)
 }
