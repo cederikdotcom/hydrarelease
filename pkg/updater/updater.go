@@ -30,6 +30,12 @@ type UpdateInfo struct {
 type Updater struct {
 	project        string
 	currentVersion string
+	serviceName    string
+}
+
+// SetServiceName sets the systemd service to restart after a successful update.
+func (u *Updater) SetServiceName(name string) {
+	u.serviceName = name
 }
 
 // NewUpdater creates an updater for the given project (e.g. "hydraguard", "hydracluster").
@@ -145,8 +151,23 @@ func (u *Updater) PerformUpdate() error {
 
 	os.Remove(tmpFile)
 	fmt.Println("\nUpdate completed successfully!")
-	fmt.Printf("Run '%s version' to verify.\n", u.project)
 	fmt.Printf("Backup saved at: %s\n", backupPath)
+
+	if u.serviceName != "" {
+		fmt.Printf("\nRestarting service %s...\n", u.serviceName)
+		restartCmd := exec.Command("systemctl", "restart", u.serviceName)
+		if output, err := restartCmd.CombinedOutput(); err != nil {
+			fmt.Printf("Warning: failed to restart %s: %s\n", u.serviceName, err)
+			if len(output) > 0 {
+				fmt.Printf("Output: %s\n", string(output))
+			}
+		} else {
+			fmt.Printf("Service %s restarted.\n", u.serviceName)
+		}
+	} else {
+		fmt.Printf("Run '%s version' to verify.\n", u.project)
+	}
+
 	return nil
 }
 
