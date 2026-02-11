@@ -102,8 +102,9 @@ jobs:
         chmod 600 ~/.ssh/deploy_key
         ssh-keyscan -H releases.experiencenet.com >> ~/.ssh/known_hosts 2>/dev/null
 
-        # Upload new binary and restart service
+        # Stop service, replace binary, restart
+        ssh -i ~/.ssh/deploy_key root@releases.experiencenet.com "systemctl stop hydrarelease"
         scp -i ~/.ssh/deploy_key dist/hydrarelease-linux-amd64 root@releases.experiencenet.com:/usr/local/bin/hydrarelease
-        ssh -i ~/.ssh/deploy_key root@releases.experiencenet.com "systemctl restart hydrarelease"
+        ssh -i ~/.ssh/deploy_key root@releases.experiencenet.com "systemctl start hydrarelease"
 
         rm -f ~/.ssh/deploy_key
