@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/cederikdotcom/hydrarelease/pkg/updater"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -32,6 +34,11 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the release file server",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		u := updater.NewUpdater("hydrarelease", version)
+		u.SetServiceName("hydrarelease")
+		u.StartAutoCheck(6*time.Hour, true)
+		log.Printf("Auto-update: enabled (every 6h)")
+
 		if serveDev {
 			listen := serveListen
 			if listen == "" {
