@@ -1,6 +1,8 @@
 package updater
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -132,13 +134,19 @@ func (u *Updater) PerformUpdate() error {
 		return fmt.Errorf("downloaded file is empty or missing")
 	}
 
+	// Verify checksum
+	fmt.Println("Verifying checksum...")
+	if err := u.verifyChecksum(tmpFile, binaryName, ver); err != nil {
+		os.Remove(tmpFile)
+		return err
+	}
+
 	if err := os.Chmod(tmpFile, 0755); err != nil {
 		os.Remove(tmpFile)
 		return fmt.Errorf("making executable: %w", err)
 	}
 
-	// Verify the binary works
-	fmt.Println("Verifying downloaded binary...")
+	// Verify the binary runs
 	verifyCmd := exec.Command(tmpFile, "version")
 	if output, err := verifyCmd.CombinedOutput(); err != nil {
 		os.Remove(tmpFile)
@@ -215,6 +223,64 @@ func (u *Updater) StartAutoCheck(interval time.Duration, autoApply bool) {
 			}
 		}
 	}()
+}
+
+func (u *Updater) verifyChecksum(filePath, binaryName, ver string) error {
+	sumsURL := fmt.Sprintf("%s/%s/SHA256SUMS", u.channelURL(), ver)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(sumsURL)
+	if err != nil {
+		return fmt.Errorf("fetching SHA256SUMS: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("SHA256SUMS not found (status %d)", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading SHA256SUMS: %w", err)
+	}
+
+	// Parse "hash  filename" lines
+	var expected string
+	for _, line := range strings.Split(strings.TrimSpace(string(body)), "\n") {
+		parts := strings.Fields(line)
+		if len(parts) == 2 && parts[1] == binaryName {
+			expected = parts[0]
+			break
+		}
+	}
+	if expected == "" {
+		return fmt.Errorf("no checksum found for %s in SHA256SUMS", binaryName)
+	}
+
+	actual, err := hashFile(filePath)
+	if err != nil {
+		return fmt.Errorf("hashing downloaded file: %w", err)
+	}
+
+	if actual != expected {
+		return fmt.Errorf("checksum mismatch: expected %s, got %s", expected, actual)
+	}
+
+	return nil
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func downloadFile(url, destPath string) error {
