@@ -28,7 +28,7 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update HydraRelease to the latest release",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		u := updater.NewUpdater("hydrarelease", version)
+		u := updater.NewProductionUpdater("hydrarelease", version)
 		u.SetServiceName("hydrarelease")
 
 		fmt.Println("Checking for updates...")
@@ -67,7 +67,7 @@ var checkUpdateCmd = &cobra.Command{
 	Use:   "check-update",
 	Short: "Check if a new version is available",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		u := updater.NewUpdater("hydrarelease", version)
+		u := updater.NewProductionUpdater("hydrarelease", version)
 
 		info, err := u.CheckForUpdate()
 		if err != nil {

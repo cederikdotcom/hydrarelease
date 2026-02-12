@@ -22,6 +22,14 @@ type latestManifest struct {
 	Version string `json:"version"`
 }
 
+// Channel represents a release channel.
+type Channel string
+
+const (
+	Production Channel = "production"
+	Staging    Channel = "staging"
+)
+
 type UpdateInfo struct {
 	CurrentVersion string
 	LatestVersion  string
@@ -32,6 +40,7 @@ type Updater struct {
 	project        string
 	currentVersion string
 	serviceName    string
+	channel        Channel
 }
 
 // SetServiceName sets the systemd service to restart after a successful update.
@@ -39,20 +48,24 @@ func (u *Updater) SetServiceName(name string) {
 	u.serviceName = name
 }
 
-// NewUpdater creates an updater for the given project (e.g. "hydraguard", "hydracluster").
-// The project name determines the URL path on the release server.
-func NewUpdater(project, currentVersion string) *Updater {
-	return &Updater{project: project, currentVersion: currentVersion}
+// NewProductionUpdater creates an updater that tracks the production release channel.
+func NewProductionUpdater(project, currentVersion string) *Updater {
+	return &Updater{project: project, currentVersion: currentVersion, channel: Production}
 }
 
-func (u *Updater) projectURL() string {
-	return releaseBaseURL + "/" + u.project
+// NewStagingUpdater creates an updater that tracks the staging release channel.
+func NewStagingUpdater(project, currentVersion string) *Updater {
+	return &Updater{project: project, currentVersion: currentVersion, channel: Staging}
+}
+
+func (u *Updater) channelURL() string {
+	return releaseBaseURL + "/" + u.project + "/" + string(u.channel)
 }
 
 func (u *Updater) CheckForUpdate() (*UpdateInfo, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	resp, err := client.Get(u.projectURL() + "/latest.json")
+	resp, err := client.Get(u.channelURL() + "/latest.json")
 	if err != nil {
 		return nil, fmt.Errorf("checking for updates: %w", err)
 	}
@@ -104,13 +117,13 @@ func (u *Updater) PerformUpdate() error {
 
 	binaryName := fmt.Sprintf("%s-%s-%s", u.project, runtime.GOOS, runtime.GOARCH)
 	ver := "v" + updateInfo.LatestVersion
-	downloadURL := fmt.Sprintf("%s/%s/%s", u.projectURL(), ver, binaryName)
+	downloadURL := fmt.Sprintf("%s/%s/%s", u.channelURL(), ver, binaryName)
 
 	fmt.Printf("Downloading %s %s for %s/%s...\n", u.project, ver, runtime.GOOS, runtime.GOARCH)
 
 	tmpFile := filepath.Join(os.TempDir(), u.project+"-update")
 	if err := downloadFile(downloadURL, tmpFile); err != nil {
-		return fmt.Errorf("downloading binary: %w\n\nManual download: %s/%s/", err, u.projectURL(), ver)
+		return fmt.Errorf("downloading binary: %w\n\nManual download: %s/%s/", err, u.channelURL(), ver)
 	}
 
 	info, err := os.Stat(tmpFile)

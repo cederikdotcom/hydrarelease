@@ -83,14 +83,16 @@ jobs:
         chmod 600 ~/.ssh/deploy_key
         ssh-keyscan -H releases.experiencenet.com >> ~/.ssh/known_hosts 2>/dev/null
 
-        # Create version directory and upload binaries
-        ssh -i ~/.ssh/deploy_key "$REMOTE" "mkdir -p ${DEST}/${VERSION}"
-        rsync -avz -e "ssh -i ~/.ssh/deploy_key" dist/ "${REMOTE}:${DEST}/${VERSION}/"
+        CHANNEL="production"
+
+        # Create channel/version directory and upload binaries
+        ssh -i ~/.ssh/deploy_key "$REMOTE" "mkdir -p ${DEST}/${CHANNEL}/${VERSION}"
+        rsync -avz -e "ssh -i ~/.ssh/deploy_key" dist/ "${REMOTE}:${DEST}/${CHANNEL}/${VERSION}/"
 
         # Upload latest.json and update latest symlink
         echo "{\"version\": \"${VERSION#v}\"}" > dist/latest.json
-        rsync -avz -e "ssh -i ~/.ssh/deploy_key" dist/latest.json "${REMOTE}:${DEST}/latest.json"
-        ssh -i ~/.ssh/deploy_key "$REMOTE" "cd ${DEST} && ln -sfn ${VERSION} latest"
+        rsync -avz -e "ssh -i ~/.ssh/deploy_key" dist/latest.json "${REMOTE}:${DEST}/${CHANNEL}/latest.json"
+        ssh -i ~/.ssh/deploy_key "$REMOTE" "cd ${DEST}/${CHANNEL} && ln -sfn ${VERSION} latest"
 
         rm -f ~/.ssh/deploy_key
 

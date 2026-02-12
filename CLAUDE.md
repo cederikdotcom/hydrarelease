@@ -39,13 +39,18 @@ internal/cli/                 # Cobra commands (root, serve, common)
 ```
 /var/www/releases/
   hydraguard/
-    latest.json                # {"version": "1.1.0"}
-    v1.1.0/
-      hydraguard-linux-amd64
-      hydraguard-linux-arm64
-      hydraguard-darwin-amd64
-      hydraguard-darwin-arm64
-      SHA256SUMS
+    production/
+      latest.json              # {"version": "1.1.0"}
+      v1.1.0/
+        hydraguard-linux-amd64
+        hydraguard-linux-arm64
+        hydraguard-darwin-amd64
+        hydraguard-darwin-arm64
+        SHA256SUMS
+    staging/
+      latest.json
+      v1.2.0/
+        ...
   hydracluster/                # future
   nimsforest/                  # future
 ```

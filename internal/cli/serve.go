@@ -34,7 +34,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the release file server",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		u := updater.NewUpdater("hydrarelease", version)
+		u := updater.NewProductionUpdater("hydrarelease", version)
 		u.SetServiceName("hydrarelease")
 		u.StartAutoCheck(6*time.Hour, true)
 		log.Printf("Auto-update: enabled (every 6h)")
