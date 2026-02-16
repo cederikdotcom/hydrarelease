@@ -118,12 +118,18 @@ func (u *Updater) PerformUpdate() error {
 	}
 
 	binaryName := fmt.Sprintf("%s-%s-%s", u.project, runtime.GOOS, runtime.GOARCH)
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
 	ver := "v" + updateInfo.LatestVersion
 	downloadURL := fmt.Sprintf("%s/%s/%s", u.channelURL(), ver, binaryName)
 
 	fmt.Printf("Downloading %s %s for %s/%s...\n", u.project, ver, runtime.GOOS, runtime.GOARCH)
 
 	tmpFile := filepath.Join(os.TempDir(), u.project+"-update")
+	if runtime.GOOS == "windows" {
+		tmpFile += ".exe"
+	}
 	if err := downloadFile(downloadURL, tmpFile); err != nil {
 		return fmt.Errorf("downloading binary: %w\n\nManual download: %s/%s/", err, u.channelURL(), ver)
 	}
