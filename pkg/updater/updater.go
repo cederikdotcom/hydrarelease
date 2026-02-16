@@ -183,12 +183,8 @@ func (u *Updater) PerformUpdate() error {
 
 	if u.serviceName != "" {
 		fmt.Printf("\nRestarting service %s...\n", u.serviceName)
-		restartCmd := exec.Command("systemctl", "restart", u.serviceName)
-		if output, err := restartCmd.CombinedOutput(); err != nil {
+		if err := restartService(u.serviceName); err != nil {
 			fmt.Printf("Warning: failed to restart %s: %s\n", u.serviceName, err)
-			if len(output) > 0 {
-				fmt.Printf("Output: %s\n", string(output))
-			}
 		} else {
 			fmt.Printf("Service %s restarted.\n", u.serviceName)
 		}
