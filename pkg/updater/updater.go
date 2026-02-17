@@ -18,7 +18,7 @@ import (
 	"github.com/cederikdotcom/hydrarelease/pkg/updater/version"
 )
 
-const releaseBaseURL = "https://releases.experiencenet.com"
+const defaultReleaseBaseURL = "https://releases.experiencenet.com"
 
 type latestManifest struct {
 	Version string `json:"version"`
@@ -43,11 +43,17 @@ type Updater struct {
 	currentVersion string
 	serviceName    string
 	channel        Channel
+	baseURL        string
 }
 
 // SetServiceName sets the systemd service to restart after a successful update.
 func (u *Updater) SetServiceName(name string) {
 	u.serviceName = name
+}
+
+// SetBaseURL overrides the default release server URL.
+func (u *Updater) SetBaseURL(url string) {
+	u.baseURL = url
 }
 
 // NewProductionUpdater creates an updater that tracks the production release channel.
@@ -61,7 +67,11 @@ func NewStagingUpdater(project, currentVersion string) *Updater {
 }
 
 func (u *Updater) channelURL() string {
-	return releaseBaseURL + "/" + u.project + "/" + string(u.channel)
+	base := defaultReleaseBaseURL
+	if u.baseURL != "" {
+		base = u.baseURL
+	}
+	return base + "/" + u.project + "/" + string(u.channel)
 }
 
 func (u *Updater) CheckForUpdate() (*UpdateInfo, error) {
