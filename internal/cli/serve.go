@@ -48,6 +48,12 @@ var serveCmd = &cobra.Command{
 			return http.ListenAndServe(listen, newHandler(serveDir))
 		}
 
+		// Plain HTTP behind reverse proxy (--listen without --dev)
+		if serveListen != "" {
+			log.Printf("serving %s on %s (behind reverse proxy, domain=%s)", serveDir, serveListen, serveDomain)
+			return http.ListenAndServe(serveListen, newHandler(serveDir))
+		}
+
 		m := &autocert.Manager{
 			Cache:      autocert.DirCache(serveCerts),
 			Prompt:     autocert.AcceptTOS,
