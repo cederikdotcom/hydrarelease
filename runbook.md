@@ -76,9 +76,21 @@ Known server IPs:
 - hydracluster: `ssh root@hydracluster.experiencenet.com`
 - hydrapipeline: `ssh root@hydrapipeline.experiencenet.com`
 - hydrarelease: `ssh root@46.225.120.7`
-- hydraexperiencelibrary: `ssh root@experiencenet.com`
+- hydraexperiencelibrary: `ssh root@hydraexperiencelibrary.experiencenet.com`
 
-### 7. Report summary
+### 7. Audit docs and memory for stale instructions
+
+Check the repo's CLAUDE.md and any memory files for instructions that contradict the CD pipeline:
+- References to `make deploy` for production (should be tag → CI)
+- Manual rsync/scp deploy instructions
+- Hardcoded version numbers that will go stale
+- Missing or incorrect release/deploy documentation
+
+Also check `/home/cederik/.claude/projects/-home-cederik-workspaces/memory/` for stale references to this project (outdated versions, old deploy procedures).
+
+Fix any issues found: update CLAUDE.md to point at the CI pipeline, remove manual deploy instructions, replace hardcoded versions with references to auto-update.
+
+### 8. Report summary
 
 | Check | Status |
 |-------|--------|
@@ -87,14 +99,14 @@ Known server IPs:
 | Deployed version (health) | version / unreachable |
 | GitHub Actions | passed / failed / never ran |
 
-### 8. Recommend actions
+### 9. Recommend actions
 
 - **Unreleased commits exist**: suggest tagging a new version (propose semver bump based on commit content)
 - **latest.json missing/outdated**: GitHub Actions likely failed or never triggered — check workflow
 - **Deployed != Released**: manual deploy happened, or auto-update hasn't kicked in yet
 - **No workflow file**: CD not set up — flag as needing setup
 
-### 9. If user approves a release
+### 10. If user approves a release
 
 Only when explicitly asked:
 1. Propose version bump (patch for fixes, minor for features, major for breaking)
