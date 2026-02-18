@@ -76,3 +76,7 @@ ssh root@46.225.120.7 "systemctl status hydrarelease"
 ```bash
 rsync -avz dist/ deploy@releases.experiencenet.com:/var/www/releases/<project>/<version>/
 ```
+
+## Runbooks
+
+See [runbook.md](runbook.md) for operational runbooks (release pipeline check, etc.).
