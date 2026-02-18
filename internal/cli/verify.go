@@ -24,7 +24,7 @@ var projects = []projectDef{
 	{Name: "hydrarelease", HealthURL: "https://releases.experiencenet.com"},
 	{Name: "hydratransfer", HealthURL: "https://hydratransfer.experiencenet.com"},
 	{Name: "hydrapipeline", HealthURL: "https://hydrapipeline.experiencenet.com"},
-	{Name: "hydraexperiencelibrary", HealthURL: "https://experiencenet.com"},
+	{Name: "hydraexperiencelibrary", HealthURL: "https://hydraexperiencelibrary.experiencenet.com"},
 	{Name: "hydracluster", HealthURL: "https://hydracluster.experiencenet.com"},
 	{Name: "hydraguard", HealthURL: ""},
 	{Name: "hydrabody", HealthURL: ""},

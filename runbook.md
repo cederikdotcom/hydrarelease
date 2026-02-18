@@ -42,7 +42,7 @@ Known health endpoints:
 - hydrarelease: `https://releases.experiencenet.com`
 - hydratransfer: `https://hydratransfer.experiencenet.com`
 - hydrapipeline: `https://hydrapipeline.experiencenet.com`
-- hydraexperiencelibrary: `https://experiencenet.com`
+- hydraexperiencelibrary: `https://hydraexperiencelibrary.experiencenet.com`
 - hydracluster: `https://hydracluster.experiencenet.com`
 
 ### 5. Check GitHub Actions workflow
