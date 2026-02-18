@@ -53,7 +53,32 @@ gh run list --limit 5
 
 Is the latest run for the latest tag? Did it succeed? If failed: `gh run view <id> --log-failed`
 
-### 6. Report summary
+### 6. Validate auto-updater
+
+SSH into the production server and manually trigger the update command to verify the self-updater works:
+
+```bash
+ssh root@<server-ip> "<name> check-update"
+```
+
+If an update is available, trigger it:
+```bash
+ssh root@<server-ip> "echo yes | <name> update"
+```
+
+Then re-check the health endpoint to confirm the version changed. If the updater fails, check:
+- Does the binary have write access to itself? (`ls -la $(which <name>)`)
+- Can it reach the release server? (`curl -s https://releases.experiencenet.com/<name>/production/latest.json`)
+- Check systemd journal for errors: `journalctl -u <name> --since '10 min ago' --no-pager`
+
+Known server IPs:
+- hydratransfer: `ssh root@hydratransfer.experiencenet.com`
+- hydracluster: `ssh root@hydracluster.experiencenet.com`
+- hydrapipeline: `ssh root@hydrapipeline.experiencenet.com`
+- hydrarelease: `ssh root@46.225.120.7`
+- hydraexperiencelibrary: `ssh root@experiencenet.com`
+
+### 7. Report summary
 
 | Check | Status |
 |-------|--------|
@@ -62,14 +87,14 @@ Is the latest run for the latest tag? Did it succeed? If failed: `gh run view <i
 | Deployed version (health) | version / unreachable |
 | GitHub Actions | passed / failed / never ran |
 
-### 7. Recommend actions
+### 8. Recommend actions
 
 - **Unreleased commits exist**: suggest tagging a new version (propose semver bump based on commit content)
 - **latest.json missing/outdated**: GitHub Actions likely failed or never triggered — check workflow
 - **Deployed != Released**: manual deploy happened, or auto-update hasn't kicked in yet
 - **No workflow file**: CD not set up — flag as needing setup
 
-### 8. If user approves a release
+### 9. If user approves a release
 
 Only when explicitly asked:
 1. Propose version bump (patch for fixes, minor for features, major for breaking)
