@@ -26,15 +26,16 @@ var projects = []projectDef{
 	{Name: "hydrapipeline", HealthURL: "https://hydrapipeline.experiencenet.com"},
 	{Name: "hydraexperiencelibrary", HealthURL: "https://hydraexperiencelibrary.experiencenet.com"},
 	{Name: "hydracluster", HealthURL: "https://hydracluster.experiencenet.com"},
-	{Name: "hydraguard", HealthURL: ""},
+	{Name: "hydraguard", HealthURL: "http://hydraguard.experiencenet.com:8081"},
 	{Name: "hydrabody", HealthURL: ""},
 }
 
 var (
-	verifyServer  string
-	verifyProject string
-	verifyJSON    bool
-	verifyTimeout int
+	verifyServer       string
+	verifyProject      string
+	verifyJSON         bool
+	verifyTimeout      int
+	verifyClusterToken string
 )
 
 type verifyResult struct {
@@ -283,7 +284,10 @@ type clusterNode struct {
 func fetchClusterNodes(client *http.Client) ([]clusterNode, error) {
 	url := "https://hydracluster.experiencenet.com/api/v1/nodes"
 
-	token := resolveToken("")
+	token := verifyClusterToken
+	if token == "" {
+		token = os.Getenv("HYDRACLUSTER_AUTH_TOKEN")
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -339,6 +343,7 @@ func init() {
 	verifyCmd.Flags().StringVar(&verifyProject, "project", "", "check a single project only")
 	verifyCmd.Flags().BoolVar(&verifyJSON, "json", false, "output as JSON")
 	verifyCmd.Flags().IntVar(&verifyTimeout, "timeout", 10, "HTTP timeout in seconds")
+	verifyCmd.Flags().StringVar(&verifyClusterToken, "cluster-token", "", "auth token for hydracluster API (or HYDRACLUSTER_AUTH_TOKEN env)")
 
 	rootCmd.AddCommand(verifyCmd)
 }
