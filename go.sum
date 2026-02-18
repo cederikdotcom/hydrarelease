@@ -1,3 +1,9 @@
+github.com/cederikdotcom/hydraapi v0.2.0 h1:twQ++Q/7V14BZ14hJz76S9t7xeZwxmjO/ofihdPdDlg=
+github.com/cederikdotcom/hydraapi v0.2.0/go.mod h1:pfCseUomMcCSRMEUimHi9zo/wShOX9jeC7hohxXWsLo=
+github.com/cederikdotcom/hydraauth v1.0.0 h1:cq/o7y3tbg6hNUubVUPLWSdqOFrdCSkuE+JXdhKY/rk=
+github.com/cederikdotcom/hydraauth v1.0.0/go.mod h1:LTBaxV3hLc0FBGG9Ek56ZpynJjiZH5HuRDulCArH+7U=
+github.com/cederikdotcom/hydramonitor v0.1.0 h1:q6wBV0LmVuwF4PDeO33wcrvkRwfxhwubJnly18BWfLU=
+github.com/cederikdotcom/hydramonitor v0.1.0/go.mod h1:58J1fYchg1YVm9TFvmr+VVB7Cy0vb3TDUSjSYGcrT14=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
