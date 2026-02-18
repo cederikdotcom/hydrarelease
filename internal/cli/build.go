@@ -16,6 +16,8 @@ var (
 	buildToken      string
 	buildProject    string
 	buildUploadedBy string
+	buildSource     string
+	buildSourceRef  string
 	buildNumber     int
 	buildJSON       bool
 )
@@ -60,6 +62,12 @@ var buildSubmitCmd = &cobra.Command{
 			"project":     buildProject,
 			"uploaded_by": buildUploadedBy,
 			"files":       files,
+		}
+		if buildSource != "" {
+			body["source"] = buildSource
+		}
+		if buildSourceRef != "" {
+			body["source_ref"] = buildSourceRef
 		}
 
 		resp, err := doJSON(buildServer, token, "POST", "/api/v1/builds", body)
@@ -168,6 +176,8 @@ func init() {
 	buildCmd.PersistentFlags().BoolVar(&buildJSON, "json", false, "output as JSON")
 
 	buildSubmitCmd.Flags().StringVar(&buildUploadedBy, "uploaded-by", "", "who uploaded the build")
+	buildSubmitCmd.Flags().StringVar(&buildSource, "source", "", "source system (e.g. perforce, git)")
+	buildSubmitCmd.Flags().StringVar(&buildSourceRef, "source-ref", "", "source reference (e.g. changelist, commit SHA)")
 	buildShowCmd.Flags().IntVar(&buildNumber, "build", 0, "build number")
 
 	buildCmd.AddCommand(buildSubmitCmd, buildListCmd, buildShowCmd)

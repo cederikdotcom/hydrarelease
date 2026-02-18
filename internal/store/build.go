@@ -19,11 +19,14 @@ type BuildFile struct {
 
 // Build represents a numbered, immutable build artifact.
 type Build struct {
-	Project     string      `yaml:"project" json:"project"`
-	BuildNumber int         `yaml:"build_number" json:"build_number"`
-	UploadedBy  string      `yaml:"uploaded_by" json:"uploaded_by"`
-	UploadedAt  time.Time   `yaml:"uploaded_at" json:"uploaded_at"`
-	Files       []BuildFile `yaml:"files" json:"files"`
+	Project     string            `yaml:"project" json:"project"`
+	BuildNumber int               `yaml:"build_number" json:"build_number"`
+	UploadedBy  string            `yaml:"uploaded_by" json:"uploaded_by"`
+	UploadedAt  time.Time         `yaml:"uploaded_at" json:"uploaded_at"`
+	Source      string            `yaml:"source,omitempty" json:"source,omitempty"`
+	SourceRef   string            `yaml:"source_ref,omitempty" json:"source_ref,omitempty"`
+	SourceMeta  map[string]string `yaml:"source_meta,omitempty" json:"source_meta,omitempty"`
+	Files       []BuildFile       `yaml:"files" json:"files"`
 }
 
 // BuildIndex is the YAML-persisted index of all builds.
@@ -101,8 +104,18 @@ func (s *BuildStore) nextBuildNumber(idx *BuildIndex, project string) int {
 	return max + 1
 }
 
+// CreateParams holds the parameters for creating a new build.
+type CreateParams struct {
+	Project    string
+	UploadedBy string
+	Source     string
+	SourceRef  string
+	SourceMeta map[string]string
+	Files      []BuildFile
+}
+
 // Create registers a new build, assigns a build number, and persists it.
-func (s *BuildStore) Create(project, uploadedBy string, files []BuildFile) (*Build, error) {
+func (s *BuildStore) Create(p CreateParams) (*Build, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -111,19 +124,22 @@ func (s *BuildStore) Create(project, uploadedBy string, files []BuildFile) (*Bui
 		return nil, err
 	}
 
-	number := s.nextBuildNumber(idx, project)
+	number := s.nextBuildNumber(idx, p.Project)
 	now := time.Now().UTC()
 
 	build := &Build{
-		Project:     project,
+		Project:     p.Project,
 		BuildNumber: number,
-		UploadedBy:  uploadedBy,
+		UploadedBy:  p.UploadedBy,
 		UploadedAt:  now,
-		Files:       files,
+		Source:      p.Source,
+		SourceRef:   p.SourceRef,
+		SourceMeta:  p.SourceMeta,
+		Files:       p.Files,
 	}
 
 	// Persist per-build metadata.
-	dir := s.buildDir(project, number)
+	dir := s.buildDir(p.Project, number)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("creating build directory: %w", err)
 	}
@@ -132,22 +148,22 @@ func (s *BuildStore) Create(project, uploadedBy string, files []BuildFile) (*Bui
 	if err != nil {
 		return nil, fmt.Errorf("marshaling build: %w", err)
 	}
-	if err := os.WriteFile(s.buildPath(project, number), data, 0644); err != nil {
+	if err := os.WriteFile(s.buildPath(p.Project, number), data, 0644); err != nil {
 		return nil, fmt.Errorf("writing build metadata: %w", err)
 	}
 
 	// Update index.
 	var totalBytes int64
-	for _, f := range files {
+	for _, f := range p.Files {
 		totalBytes += f.Size
 	}
 
 	idx.Builds = append(idx.Builds, BuildIndexEntry{
-		Project:     project,
+		Project:     p.Project,
 		BuildNumber: number,
-		UploadedBy:  uploadedBy,
+		UploadedBy:  p.UploadedBy,
 		UploadedAt:  now,
-		FileCount:   len(files),
+		FileCount:   len(p.Files),
 		TotalBytes:  totalBytes,
 	})
 

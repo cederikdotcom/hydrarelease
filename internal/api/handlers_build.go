@@ -12,7 +12,10 @@ import (
 
 type createBuildRequest struct {
 	Project    string            `json:"project"`
-	UploadedBy string           `json:"uploaded_by"`
+	UploadedBy string            `json:"uploaded_by"`
+	Source     string            `json:"source,omitempty"`
+	SourceRef  string            `json:"source_ref,omitempty"`
+	SourceMeta map[string]string `json:"source_meta,omitempty"`
 	Files      []store.BuildFile `json:"files"`
 }
 
@@ -32,7 +35,14 @@ func (s *Server) handleCreateBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	build, err := s.Builds.Create(req.Project, req.UploadedBy, req.Files)
+	build, err := s.Builds.Create(store.CreateParams{
+		Project:    req.Project,
+		UploadedBy: req.UploadedBy,
+		Source:     req.Source,
+		SourceRef:  req.SourceRef,
+		SourceMeta: req.SourceMeta,
+		Files:      req.Files,
+	})
 	if err != nil {
 		hydraapi.WriteError(w, http.StatusInternalServerError, "failed to create build")
 		return
@@ -43,17 +53,24 @@ func (s *Server) handleCreateBuild(w http.ResponseWriter, r *http.Request) {
 	for _, f := range build.Files {
 		totalBytes += f.Size
 	}
+	eventData := map[string]any{
+		"district":     "",
+		"timestamp":    build.UploadedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"project":      build.Project,
+		"build_number": build.BuildNumber,
+		"uploaded_by":  build.UploadedBy,
+		"file_count":   len(build.Files),
+		"total_bytes":  totalBytes,
+	}
+	if build.Source != "" {
+		eventData["source"] = build.Source
+	}
+	if build.SourceRef != "" {
+		eventData["source_ref"] = build.SourceRef
+	}
 	s.Monitor.Emit(hydramonitor.Event{
 		Type: "build.uploaded",
-		Data: map[string]any{
-			"district":     "",
-			"timestamp":    build.UploadedAt.Format("2006-01-02T15:04:05Z07:00"),
-			"project":      build.Project,
-			"build_number": build.BuildNumber,
-			"uploaded_by":  build.UploadedBy,
-			"file_count":   len(build.Files),
-			"total_bytes":  totalBytes,
-		},
+		Data: eventData,
 	})
 
 	hydraapi.WriteJSON(w, http.StatusCreated, build)
