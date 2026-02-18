@@ -15,17 +15,27 @@ Self-hosted release file server for experiencenet projects (hydraguard, hydraclu
 | **Domain DNS** | `experiencenet.com` is on Hetzner DNS (zone ID 788422) |
 | **Hetzner project** | Same token as hydraguard (`~/.morpheus/config.yaml`) |
 
-## Build and Deploy
+## Build and Test
 
 ```bash
 make build          # Build binary to bin/hydrarelease
-make deploy         # Cross-compile and deploy to release server
 make test           # Run all tests
 make vet            # Run go vet
 make fmt            # Format code
 ```
 
 Requires Go 1.22+.
+
+## Releasing
+
+Releases go through GitHub Actions CI/CD. **Do not use `make deploy` for production.**
+
+1. Tag a new version: `git tag v<X.Y.Z>`
+2. Push the tag: `git push origin v<X.Y.Z>`
+3. GitHub Actions builds, creates a GitHub Release, uploads binaries to the release server, and deploys to production.
+4. Verify: `hydrarelease verify --project hydrarelease`
+
+See [runbook.md](runbook.md) for the full release pipeline check procedure.
 
 ## Project Structure
 
@@ -57,11 +67,6 @@ internal/cli/                 # Cobra commands (root, serve, common)
 
 ## Common Agent Tasks
 
-### Deploy updated binary
-```bash
-make deploy
-```
-
 ### SSH to the release server
 ```bash
 ssh root@46.225.120.7
@@ -70,11 +75,6 @@ ssh root@46.225.120.7
 ### Check service status
 ```bash
 ssh root@46.225.120.7 "systemctl status hydrarelease"
-```
-
-### Upload a release manually
-```bash
-rsync -avz dist/ deploy@releases.experiencenet.com:/var/www/releases/<project>/<version>/
 ```
 
 ## Runbooks
