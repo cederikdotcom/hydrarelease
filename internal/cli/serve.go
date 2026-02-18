@@ -2,32 +2,29 @@ package cli
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/cederikdotcom/hydraauth"
+	"github.com/cederikdotcom/hydramonitor"
+	"github.com/cederikdotcom/hydrarelease/internal/api"
+	"github.com/cederikdotcom/hydrarelease/internal/store"
 	"github.com/cederikdotcom/hydrarelease/pkg/updater"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func newHandler(dir string) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "version": version})
-	})
-	mux.Handle("/", http.FileServer(http.Dir(dir)))
-	return mux
-}
-
 var (
-	serveDir    string
-	serveDomain string
-	serveCerts  string
-	serveDev    bool
-	serveListen string
+	serveDir          string
+	serveDataDir      string
+	serveDomain       string
+	serveCerts        string
+	serveDev          bool
+	serveListen       string
+	servePublishToken string
+	serveAuthToken    string
 )
 
 var serveCmd = &cobra.Command{
@@ -39,19 +36,61 @@ var serveCmd = &cobra.Command{
 		u.StartAutoCheck(6*time.Hour, true)
 		log.Printf("Auto-update: enabled (every 6h)")
 
+		// Resolve tokens from flags or environment.
+		publishToken := servePublishToken
+		if publishToken == "" {
+			publishToken = os.Getenv("HYDRARELEASE_PUBLISH_TOKEN")
+		}
+
+		authToken := serveAuthToken
+		if authToken == "" {
+			authToken = os.Getenv("HYDRARELEASE_AUTH_TOKEN")
+		}
+		// Fall back to publish token if no separate auth token.
+		if authToken == "" {
+			authToken = publishToken
+		}
+
+		if authToken == "" {
+			log.Printf("Warning: no auth token configured; write endpoints and SSE will be disabled")
+		}
+
+		// Initialize stores.
+		builds := store.NewBuildStore(serveDataDir)
+		releases := store.NewReleaseStore(serveDataDir, serveDir)
+
+		// Initialize auth and monitor.
+		auth := hydraauth.New(authToken)
+		monitor := hydramonitor.New(hydramonitor.Config{
+			AdminToken: authToken,
+		})
+
+		startTime := time.Now()
+
+		srv := &api.Server{
+			Builds:   builds,
+			Releases: releases,
+			Auth:     auth,
+			Monitor:  monitor,
+			FileDir:  serveDir,
+			Version:  version,
+		}
+
+		handler := srv.Handler(publishToken, startTime)
+
 		if serveDev {
 			listen := serveListen
 			if listen == "" {
 				listen = ":8080"
 			}
 			log.Printf("serving %s on %s (HTTP, dev mode)", serveDir, listen)
-			return http.ListenAndServe(listen, newHandler(serveDir))
+			return http.ListenAndServe(listen, handler)
 		}
 
-		// Plain HTTP behind reverse proxy (--listen without --dev)
+		// Plain HTTP behind reverse proxy.
 		if serveListen != "" {
 			log.Printf("serving %s on %s (behind reverse proxy, domain=%s)", serveDir, serveListen, serveDomain)
-			return http.ListenAndServe(serveListen, newHandler(serveDir))
+			return http.ListenAndServe(serveListen, handler)
 		}
 
 		m := &autocert.Manager{
@@ -60,9 +99,9 @@ var serveCmd = &cobra.Command{
 			HostPolicy: autocert.HostWhitelist(serveDomain),
 		}
 
-		srv := &http.Server{
+		httpSrv := &http.Server{
 			Addr:      ":443",
-			Handler:   newHandler(serveDir),
+			Handler:   handler,
 			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
 		}
 
@@ -74,16 +113,19 @@ var serveCmd = &cobra.Command{
 		}()
 
 		log.Printf("serving %s on %s (HTTPS)", serveDir, serveDomain)
-		return srv.ListenAndServeTLS("", "")
+		return httpSrv.ListenAndServeTLS("", "")
 	},
 }
 
 func init() {
-	serveCmd.Flags().StringVar(&serveDir, "dir", "/var/www/releases", "directory to serve")
+	serveCmd.Flags().StringVar(&serveDir, "dir", "/var/www/releases", "directory to serve release files")
+	serveCmd.Flags().StringVar(&serveDataDir, "data-dir", "/var/lib/hydrarelease", "directory for build/release metadata")
 	serveCmd.Flags().StringVar(&serveDomain, "domain", "releases.experiencenet.com", "domain for TLS certificate")
 	serveCmd.Flags().StringVar(&serveCerts, "certs", "/var/lib/hydrarelease/certs", "directory to cache TLS certificates")
 	serveCmd.Flags().BoolVar(&serveDev, "dev", false, "run in development mode (plain HTTP)")
-	serveCmd.Flags().StringVar(&serveListen, "listen", "", "listen address for dev mode (default :8080)")
+	serveCmd.Flags().StringVar(&serveListen, "listen", "", "listen address (default :8080 in dev mode)")
+	serveCmd.Flags().StringVar(&servePublishToken, "publish-token", "", "bearer token for legacy publish API (or HYDRARELEASE_PUBLISH_TOKEN env)")
+	serveCmd.Flags().StringVar(&serveAuthToken, "auth-token", "", "bearer token for build/release API and SSE (or HYDRARELEASE_AUTH_TOKEN env)")
 
 	rootCmd.AddCommand(serveCmd)
 }
