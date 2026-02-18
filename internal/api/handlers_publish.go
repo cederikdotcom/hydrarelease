@@ -102,7 +102,7 @@ func handleFinalize(dir string) http.HandlerFunc {
 		}
 
 		sumsPath := filepath.Join(versionDir, "SHA256SUMS")
-		if err := os.WriteFile(sumsPath, []byte(sums.String()), 0644); err != nil {
+		if err := atomicWriteFile(sumsPath, []byte(sums.String()), 0644); err != nil {
 			log.Printf("publish: write SHA256SUMS: %v", err)
 			hydraapi.WriteError(w, http.StatusInternalServerError, "internal error")
 			return
@@ -114,7 +114,7 @@ func handleFinalize(dir string) http.HandlerFunc {
 		// Write latest.json.
 		channelDir := filepath.Join(dir, project, channel)
 		latestJSON, _ := json.Marshal(map[string]string{"version": cleanVersion})
-		if err := os.WriteFile(filepath.Join(channelDir, "latest.json"), latestJSON, 0644); err != nil {
+		if err := atomicWriteFile(filepath.Join(channelDir, "latest.json"), latestJSON, 0644); err != nil {
 			log.Printf("publish: write latest.json: %v", err)
 			hydraapi.WriteError(w, http.StatusInternalServerError, "internal error")
 			return

@@ -82,7 +82,7 @@ func (s *ReleaseStore) saveIndex(idx *ReleaseIndex) error {
 	if err := os.MkdirAll(filepath.Dir(s.indexPath()), 0755); err != nil {
 		return fmt.Errorf("creating index directory: %w", err)
 	}
-	return os.WriteFile(s.indexPath(), data, 0644)
+	return atomicWriteFile(s.indexPath(), data, 0644)
 }
 
 func (s *ReleaseStore) loadRelease(project, env string) (*Release, error) {
@@ -109,7 +109,7 @@ func (s *ReleaseStore) saveRelease(rel *Release) error {
 	if err != nil {
 		return fmt.Errorf("marshaling release: %w", err)
 	}
-	return os.WriteFile(path, data, 0644)
+	return atomicWriteFile(path, data, 0644)
 }
 
 // writeLatestJSON writes latest.json for a project/environment to the file serving directory.
@@ -127,7 +127,7 @@ func (s *ReleaseStore) writeLatestJSON(project, env, version string, buildNumber
 	if err != nil {
 		return fmt.Errorf("marshaling latest.json: %w", err)
 	}
-	return os.WriteFile(filepath.Join(dir, "latest.json"), data, 0644)
+	return atomicWriteFile(filepath.Join(dir, "latest.json"), data, 0644)
 }
 
 // PromoteRequest contains the parameters for promoting a build.

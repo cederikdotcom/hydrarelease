@@ -90,7 +90,7 @@ func (s *BuildStore) saveIndex(idx *BuildIndex) error {
 	if err := os.MkdirAll(filepath.Dir(s.indexPath()), 0755); err != nil {
 		return fmt.Errorf("creating index directory: %w", err)
 	}
-	return os.WriteFile(s.indexPath(), data, 0644)
+	return atomicWriteFile(s.indexPath(), data, 0644)
 }
 
 // nextBuildNumber returns the next build number for a project.
@@ -148,7 +148,7 @@ func (s *BuildStore) Create(p CreateParams) (*Build, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshaling build: %w", err)
 	}
-	if err := os.WriteFile(s.buildPath(p.Project, number), data, 0644); err != nil {
+	if err := atomicWriteFile(s.buildPath(p.Project, number), data, 0644); err != nil {
 		return nil, fmt.Errorf("writing build metadata: %w", err)
 	}
 
