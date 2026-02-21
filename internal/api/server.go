@@ -7,6 +7,7 @@ import (
 	"github.com/cederikdotcom/hydraapi"
 	"github.com/cederikdotcom/hydraauth"
 	"github.com/cederikdotcom/hydramonitor"
+	"github.com/cederikdotcom/hydrarelease/docs"
 	"github.com/cederikdotcom/hydrarelease/internal/store"
 )
 
@@ -28,6 +29,13 @@ func (s *Server) Handler(publishToken string, startTime time.Time) http.Handler 
 	mux.HandleFunc("GET /api/v1/health", hydraapi.NewHealthHandler(
 		"hydrarelease", s.Version, "", startTime, s.healthExtra,
 	))
+
+	// Runbook
+	mux.HandleFunc("GET /api/v1/runbook", func(w http.ResponseWriter, r *http.Request) {
+		data, _ := docs.Files.ReadFile("runbook.md")
+		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		w.Write(data)
+	})
 
 	// SSE events.
 	mux.HandleFunc("GET /api/v1/events", s.Auth.RequireAuth(s.Monitor.HandleEvents))
