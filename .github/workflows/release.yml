@@ -95,19 +95,3 @@ jobs:
         ssh -i ~/.ssh/deploy_key "$REMOTE" "cd ${DEST}/${CHANNEL} && ln -sfn ${VERSION} latest"
 
         rm -f ~/.ssh/deploy_key
-
-    - name: Deploy to release server
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.RELEASES_SSH_KEY }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-        chmod 600 ~/.ssh/deploy_key
-        ssh-keyscan -H releases.experiencenet.com >> ~/.ssh/known_hosts 2>/dev/null
-
-        # Stop service, replace binary, restart
-        ssh -i ~/.ssh/deploy_key root@releases.experiencenet.com "systemctl stop hydrarelease"
-        scp -i ~/.ssh/deploy_key dist/hydrarelease-linux-amd64 root@releases.experiencenet.com:/usr/local/bin/hydrarelease
-        ssh -i ~/.ssh/deploy_key root@releases.experiencenet.com "systemctl start hydrarelease"
-
-        rm -f ~/.ssh/deploy_key

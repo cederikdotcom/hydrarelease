@@ -32,7 +32,7 @@ Releases go through GitHub Actions CI/CD. **Do not use `make deploy` for product
 
 1. Tag a new version: `git tag v<X.Y.Z>`
 2. Push the tag: `git push origin v<X.Y.Z>`
-3. GitHub Actions builds, creates a GitHub Release, uploads binaries to the release server, and deploys to production.
+3. GitHub Actions builds, creates a GitHub Release, and uploads binaries to the release server. The service auto-updates from `latest.json` on its next poll cycle.
 4. Verify: `hydrarelease verify --project hydrarelease`
 
 See [runbook.md](runbook.md) for the full release pipeline check procedure.
