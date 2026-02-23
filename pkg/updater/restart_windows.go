@@ -8,12 +8,17 @@ import (
 )
 
 func restartService(name string) error {
-	// Stop the scheduled task, then start it again.
-	if output, err := exec.Command("schtasks", "/End", "/TN", name).CombinedOutput(); err != nil {
-		return fmt.Errorf("stopping task: %w\nOutput: %s", err, string(output))
+	// Spawn a detached cmd.exe that stops us, waits, then starts the new binary.
+	// We can't do /End then /Run sequentially because /End kills our own process
+	// before /Run executes. The detached cmd.exe survives our termination.
+	script := fmt.Sprintf(
+		`schtasks /End /TN "%s" & timeout /t 3 /nobreak >nul & schtasks /Run /TN "%s"`,
+		name, name,
+	)
+	cmd := exec.Command("cmd", "/c", script)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("spawning restart script: %w", err)
 	}
-	if output, err := exec.Command("schtasks", "/Run", "/TN", name).CombinedOutput(); err != nil {
-		return fmt.Errorf("starting task: %w\nOutput: %s", err, string(output))
-	}
+	// Don't wait — let the detached process handle it while we get killed.
 	return nil
 }
