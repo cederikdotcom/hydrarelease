@@ -36,6 +36,31 @@ curl -s https://releases.experiencenet.com/api/v1/health
 4. Check disk space: `df -h /var/www/releases/`
 5. Restart if needed: `systemctl restart hydrarelease`
 
+## Mirror Integration
+
+HydraRelease pushes files to hydramirror on two occasions:
+
+1. **Finalize** — after a legacy publish finalize, all version files are PUT to mirror-a under `releases/{project}/{channel}/{version}/`
+2. **Build create** — when a build has files with `mirror_path`, hydrarelease calls `POST /api/v1/link` on mirror-a to hardlink the transfer path to a `builds/{project}/{number}/{filename}` path
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `HYDRARELEASE_MIRROR_URL` | hydramirror base URL (e.g. `https://mirror-a.experiencenet.com`) |
+| `HYDRARELEASE_MIRROR_TOKEN` | Bearer token for hydramirror write operations |
+
+These are set in `/etc/hydrarelease.env`. Restart the service after changes:
+```bash
+systemctl restart hydrarelease
+```
+
+### Verify mirror push is working
+```bash
+# Check logs for mirror-push or mirror-link entries
+journalctl -u hydrarelease --since '1 hour ago' --no-pager | grep mirror
+```
+
 ---
 
 ## Release Pipeline Check
