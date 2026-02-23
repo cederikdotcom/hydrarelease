@@ -12,9 +12,10 @@ import (
 
 // BuildFile represents a file within a build.
 type BuildFile struct {
-	Path   string `yaml:"path" json:"path"`
-	Size   int64  `yaml:"size" json:"size"`
-	SHA256 string `yaml:"sha256" json:"sha256"`
+	Path       string `yaml:"path" json:"path"`
+	Size       int64  `yaml:"size" json:"size"`
+	SHA256     string `yaml:"sha256" json:"sha256"`
+	MirrorPath string `yaml:"mirror_path,omitempty" json:"mirror_path,omitempty"`
 }
 
 // Build represents a numbered, immutable build artifact.

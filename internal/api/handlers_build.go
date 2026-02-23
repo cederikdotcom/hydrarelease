@@ -1,9 +1,13 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/cederikdotcom/hydraapi"
 	"github.com/cederikdotcom/hydramonitor"
@@ -73,7 +77,52 @@ func (s *Server) handleCreateBuild(w http.ResponseWriter, r *http.Request) {
 		Data: eventData,
 	})
 
+	// Create mirror hardlinks for files with mirror_path (best-effort, non-blocking).
+	if s.MirrorURL != "" {
+		go s.linkMirrorFiles(build)
+	}
+
 	hydraapi.WriteJSON(w, http.StatusCreated, build)
+}
+
+// linkMirrorFiles calls hydramirror's link endpoint for each file that has a mirror_path.
+// For each file, the source is the mirror_path (where the file was pushed during finalize)
+// and the target is a build-specific path.
+func (s *Server) linkMirrorFiles(build *store.Build) {
+	for _, f := range build.Files {
+		if f.MirrorPath == "" {
+			continue
+		}
+
+		target := fmt.Sprintf("builds/%s/%d/%s", build.Project, build.BuildNumber, f.Path)
+
+		body, _ := json.Marshal(map[string]any{
+			"source":  f.MirrorPath,
+			"targets": []string{target},
+		})
+
+		url := strings.TrimRight(s.MirrorURL, "/") + "/api/v1/link"
+		req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+		if err != nil {
+			log.Printf("[mirror-link] failed to create request: %v", err)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+s.MirrorToken)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("[mirror-link] failed to link %s -> %s: %v", f.MirrorPath, target, err)
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			log.Printf("[mirror-link] linked %s -> %s", f.MirrorPath, target)
+		} else {
+			log.Printf("[mirror-link] link %s -> %s returned %d", f.MirrorPath, target, resp.StatusCode)
+		}
+	}
 }
 
 func (s *Server) handleListBuilds(w http.ResponseWriter, r *http.Request) {
