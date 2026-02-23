@@ -74,6 +74,9 @@ func (s *Server) handlePromoteRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update latest version tracking for updater polling.
+	s.SetLatest(rel.Project, envToChannel(rel.Environment), rel.Version, rel.BuildNumber)
+
 	// Emit SSE event.
 	s.Monitor.Emit(hydramonitor.Event{
 		Type: "release.promoted",
@@ -119,6 +122,9 @@ func (s *Server) handleRollbackRelease(w http.ResponseWriter, r *http.Request) {
 		hydraapi.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// Update latest version tracking for updater polling.
+	s.SetLatest(rel.Project, envToChannel(rel.Environment), rel.Version, rel.BuildNumber)
 
 	// Emit SSE event.
 	s.Monitor.Emit(hydramonitor.Event{

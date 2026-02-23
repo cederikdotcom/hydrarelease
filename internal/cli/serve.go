@@ -17,7 +17,6 @@ import (
 )
 
 var (
-	serveDir          string
 	serveDataDir      string
 	serveDomain       string
 	serveCerts        string
@@ -59,7 +58,7 @@ var serveCmd = &cobra.Command{
 
 		// Initialize stores.
 		builds := store.NewBuildStore(serveDataDir)
-		releases := store.NewReleaseStore(serveDataDir, serveDir)
+		releases := store.NewReleaseStore(serveDataDir)
 
 		// Initialize auth and monitor.
 		auth := hydraauth.New(authToken)
@@ -78,16 +77,21 @@ var serveCmd = &cobra.Command{
 			mirrorToken = os.Getenv("HYDRARELEASE_MIRROR_TOKEN")
 		}
 
+		if mirrorURL == "" {
+			log.Printf("Warning: no mirror URL configured; publish and file serving will not work")
+		}
+
 		srv := &api.Server{
 			Builds:      builds,
 			Releases:    releases,
 			Auth:        auth,
 			Monitor:     monitor,
-			FileDir:     serveDir,
 			Version:     version,
 			MirrorURL:   mirrorURL,
 			MirrorToken: mirrorToken,
 		}
+
+		srv.InitLatest()
 
 		handler := srv.Handler(publishToken, startTime)
 
@@ -96,13 +100,13 @@ var serveCmd = &cobra.Command{
 			if listen == "" {
 				listen = ":8080"
 			}
-			log.Printf("serving %s on %s (HTTP, dev mode)", serveDir, listen)
+			log.Printf("serving on %s (HTTP, dev mode)", listen)
 			return http.ListenAndServe(listen, handler)
 		}
 
 		// Plain HTTP behind reverse proxy.
 		if serveListen != "" {
-			log.Printf("serving %s on %s (behind reverse proxy, domain=%s)", serveDir, serveListen, serveDomain)
+			log.Printf("serving on %s (behind reverse proxy, domain=%s)", serveListen, serveDomain)
 			return http.ListenAndServe(serveListen, handler)
 		}
 
@@ -125,13 +129,12 @@ var serveCmd = &cobra.Command{
 			}))))
 		}()
 
-		log.Printf("serving %s on %s (HTTPS)", serveDir, serveDomain)
+		log.Printf("serving on %s (HTTPS)", serveDomain)
 		return httpSrv.ListenAndServeTLS("", "")
 	},
 }
 
 func init() {
-	serveCmd.Flags().StringVar(&serveDir, "dir", "/var/www/releases", "directory to serve release files")
 	serveCmd.Flags().StringVar(&serveDataDir, "data-dir", "/var/lib/hydrarelease", "directory for build/release metadata")
 	serveCmd.Flags().StringVar(&serveDomain, "domain", "releases.experiencenet.com", "domain for TLS certificate")
 	serveCmd.Flags().StringVar(&serveCerts, "certs", "/var/lib/hydrarelease/certs", "directory to cache TLS certificates")
@@ -139,7 +142,7 @@ func init() {
 	serveCmd.Flags().StringVar(&serveListen, "listen", "", "listen address (default :8080 in dev mode)")
 	serveCmd.Flags().StringVar(&servePublishToken, "publish-token", "", "bearer token for legacy publish API (or HYDRARELEASE_PUBLISH_TOKEN env)")
 	serveCmd.Flags().StringVar(&serveAuthToken, "auth-token", "", "bearer token for build/release API and SSE (or HYDRARELEASE_AUTH_TOKEN env)")
-	serveCmd.Flags().StringVar(&serveMirrorURL, "mirror-url", "", "hydramirror URL to push release files to (or HYDRARELEASE_MIRROR_URL env)")
+	serveCmd.Flags().StringVar(&serveMirrorURL, "mirror-url", "", "hydramirror URL for file storage (or HYDRARELEASE_MIRROR_URL env)")
 	serveCmd.Flags().StringVar(&serveMirrorToken, "mirror-token", "", "bearer token for hydramirror (or HYDRARELEASE_MIRROR_TOKEN env)")
 
 	rootCmd.AddCommand(serveCmd)

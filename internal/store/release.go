@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,13 +41,11 @@ type ReleaseIndexEntry struct {
 type ReleaseStore struct {
 	mu      sync.Mutex
 	dataDir string // root data directory
-	fileDir string // directory where latest.json files are served (e.g. /var/www/releases)
 }
 
 // NewReleaseStore creates a new ReleaseStore.
-// dataDir is where YAML state is stored, fileDir is the serving directory for latest.json.
-func NewReleaseStore(dataDir, fileDir string) *ReleaseStore {
-	return &ReleaseStore{dataDir: dataDir, fileDir: fileDir}
+func NewReleaseStore(dataDir string) *ReleaseStore {
+	return &ReleaseStore{dataDir: dataDir}
 }
 
 func (s *ReleaseStore) indexPath() string {
@@ -112,24 +109,6 @@ func (s *ReleaseStore) saveRelease(rel *Release) error {
 	return atomicWriteFile(path, data, 0644)
 }
 
-// writeLatestJSON writes latest.json for a project/environment to the file serving directory.
-func (s *ReleaseStore) writeLatestJSON(project, env, version string, buildNumber int) error {
-	dir := filepath.Join(s.fileDir, project, env)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating latest.json directory: %w", err)
-	}
-
-	payload := map[string]any{
-		"version":      version,
-		"build_number": buildNumber,
-	}
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("marshaling latest.json: %w", err)
-	}
-	return atomicWriteFile(filepath.Join(dir, "latest.json"), data, 0644)
-}
-
 // PromoteRequest contains the parameters for promoting a build.
 type PromoteRequest struct {
 	Project      string
@@ -189,11 +168,6 @@ func (s *ReleaseStore) Promote(req PromoteRequest) (*Release, error) {
 	})
 	if err := s.saveIndex(idx); err != nil {
 		return nil, err
-	}
-
-	// Write latest.json for deployed instances to poll.
-	if err := s.writeLatestJSON(req.Project, req.Environment, req.Version, req.BuildNumber); err != nil {
-		return nil, fmt.Errorf("writing latest.json: %w", err)
 	}
 
 	return rel, nil
@@ -261,10 +235,6 @@ func (s *ReleaseStore) Rollback(project, env, rolledBackBy string) (*Release, er
 		return nil, err
 	}
 
-	if err := s.writeLatestJSON(project, env, prevVersion, rel.BuildNumber); err != nil {
-		return nil, fmt.Errorf("writing latest.json: %w", err)
-	}
-
 	return rel, nil
 }
 
@@ -297,6 +267,44 @@ func (s *ReleaseStore) List(project string) ([]ReleaseIndexEntry, error) {
 	for _, e := range idx.Releases {
 		if e.Project == project {
 			result = append(result, e)
+		}
+	}
+	return result, nil
+}
+
+// ListCurrentReleases returns the current release for every project/environment
+// by scanning the releases directory. Used to pre-populate the latest map on startup.
+func (s *ReleaseStore) ListCurrentReleases() ([]Release, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	releasesDir := filepath.Join(s.dataDir, "releases")
+	projects, err := os.ReadDir(releasesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("reading releases directory: %w", err)
+	}
+
+	var result []Release
+	for _, p := range projects {
+		if !p.IsDir() {
+			continue
+		}
+		envs, err := os.ReadDir(filepath.Join(releasesDir, p.Name()))
+		if err != nil {
+			continue
+		}
+		for _, e := range envs {
+			if !e.IsDir() {
+				continue
+			}
+			rel, err := s.loadRelease(p.Name(), e.Name())
+			if err != nil || rel == nil {
+				continue
+			}
+			result = append(result, *rel)
 		}
 	}
 	return result, nil
