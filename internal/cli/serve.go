@@ -25,6 +25,8 @@ var (
 	serveListen       string
 	servePublishToken string
 	serveAuthToken    string
+	serveMirrorURL    string
+	serveMirrorToken  string
 )
 
 var serveCmd = &cobra.Command{
@@ -67,13 +69,24 @@ var serveCmd = &cobra.Command{
 
 		startTime := time.Now()
 
+		mirrorURL := serveMirrorURL
+		if mirrorURL == "" {
+			mirrorURL = os.Getenv("HYDRARELEASE_MIRROR_URL")
+		}
+		mirrorToken := serveMirrorToken
+		if mirrorToken == "" {
+			mirrorToken = os.Getenv("HYDRARELEASE_MIRROR_TOKEN")
+		}
+
 		srv := &api.Server{
-			Builds:   builds,
-			Releases: releases,
-			Auth:     auth,
-			Monitor:  monitor,
-			FileDir:  serveDir,
-			Version:  version,
+			Builds:      builds,
+			Releases:    releases,
+			Auth:        auth,
+			Monitor:     monitor,
+			FileDir:     serveDir,
+			Version:     version,
+			MirrorURL:   mirrorURL,
+			MirrorToken: mirrorToken,
 		}
 
 		handler := srv.Handler(publishToken, startTime)
@@ -126,6 +139,8 @@ func init() {
 	serveCmd.Flags().StringVar(&serveListen, "listen", "", "listen address (default :8080 in dev mode)")
 	serveCmd.Flags().StringVar(&servePublishToken, "publish-token", "", "bearer token for legacy publish API (or HYDRARELEASE_PUBLISH_TOKEN env)")
 	serveCmd.Flags().StringVar(&serveAuthToken, "auth-token", "", "bearer token for build/release API and SSE (or HYDRARELEASE_AUTH_TOKEN env)")
+	serveCmd.Flags().StringVar(&serveMirrorURL, "mirror-url", "", "hydramirror URL to push release files to (or HYDRARELEASE_MIRROR_URL env)")
+	serveCmd.Flags().StringVar(&serveMirrorToken, "mirror-token", "", "bearer token for hydramirror (or HYDRARELEASE_MIRROR_TOKEN env)")
 
 	rootCmd.AddCommand(serveCmd)
 }

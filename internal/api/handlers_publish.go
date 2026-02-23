@@ -68,7 +68,7 @@ func handleUploadBinary(dir string) http.HandlerFunc {
 	}
 }
 
-func handleFinalize(dir string) http.HandlerFunc {
+func handleFinalize(dir, mirrorURL, mirrorToken string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		project := r.PathValue("project")
 		channel := r.PathValue("channel")
@@ -125,7 +125,62 @@ func handleFinalize(dir string) http.HandlerFunc {
 		os.Remove(latestLink)
 		os.Symlink(version, latestLink)
 
+		// Push version files to hydramirror (best-effort, non-blocking).
+		if mirrorURL != "" {
+			go pushToMirror(mirrorURL, mirrorToken, dir, project, channel, version)
+		}
+
 		log.Printf("publish: finalized %s/%s/%s", project, channel, version)
 		hydraapi.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": cleanVersion, "channel": channel})
+	}
+}
+
+// pushToMirror pushes all files in a version directory to hydramirror.
+func pushToMirror(mirrorURL, mirrorToken, dir, project, channel, version string) {
+	versionDir := filepath.Join(dir, project, channel, version)
+	entries, err := os.ReadDir(versionDir)
+	if err != nil {
+		log.Printf("mirror-push: failed to read %s: %v", versionDir, err)
+		return
+	}
+
+	client := &http.Client{Timeout: 5 * 60 * 1000000000} // 5 minutes
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+
+		mirrorPath := fmt.Sprintf("releases/%s/%s/%s/%s", project, channel, version, e.Name())
+		filePath := filepath.Join(versionDir, e.Name())
+
+		f, err := os.Open(filePath)
+		if err != nil {
+			log.Printf("mirror-push: failed to open %s: %v", filePath, err)
+			continue
+		}
+
+		url := strings.TrimRight(mirrorURL, "/") + "/api/v1/files/" + mirrorPath
+		req, err := http.NewRequest("PUT", url, f)
+		if err != nil {
+			f.Close()
+			log.Printf("mirror-push: failed to create request for %s: %v", mirrorPath, err)
+			continue
+		}
+		req.Header.Set("Authorization", "Bearer "+mirrorToken)
+
+		resp, err := client.Do(req)
+		f.Close()
+		if err != nil {
+			log.Printf("mirror-push: failed to push %s: %v", mirrorPath, err)
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+			log.Printf("mirror-push: %s returned %d", mirrorPath, resp.StatusCode)
+			continue
+		}
+
+		log.Printf("mirror-push: pushed %s", mirrorPath)
 	}
 }

@@ -13,12 +13,14 @@ import (
 
 // Server holds all dependencies for HTTP handlers.
 type Server struct {
-	Builds   *store.BuildStore
-	Releases *store.ReleaseStore
-	Auth     *hydraauth.Auth
-	Monitor  *hydramonitor.Monitor
-	FileDir  string // directory served by the file server (e.g. /var/www/releases)
-	Version  string
+	Builds      *store.BuildStore
+	Releases    *store.ReleaseStore
+	Auth        *hydraauth.Auth
+	Monitor     *hydramonitor.Monitor
+	FileDir     string // directory served by the file server (e.g. /var/www/releases)
+	Version     string
+	MirrorURL   string // optional hydramirror URL to push files to
+	MirrorToken string // bearer token for hydramirror
 }
 
 // Handler returns the top-level HTTP handler with all routes registered.
@@ -54,7 +56,7 @@ func (s *Server) Handler(publishToken string, startTime time.Time) http.Handler 
 	// Legacy publish endpoints (backward compat for existing CI).
 	if publishToken != "" {
 		mux.HandleFunc("POST /api/v1/publish/{project}/{channel}/{version}/finalize",
-			s.Auth.RequireAuth(handleFinalize(s.FileDir)))
+			s.Auth.RequireAuth(handleFinalize(s.FileDir, s.MirrorURL, s.MirrorToken)))
 		mux.HandleFunc("POST /api/v1/publish/{project}/{channel}/{version}/{binary}",
 			s.Auth.RequireAuth(handleUploadBinary(s.FileDir)))
 	}
