@@ -136,9 +136,11 @@ func (u *Updater) PerformUpdate() error {
 
 	fmt.Printf("Downloading %s %s for %s/%s...\n", u.project, ver, runtime.GOOS, runtime.GOARCH)
 
-	tmpFile := filepath.Join(os.TempDir(), u.project+"-update")
+	// Download to the same directory as the target binary so os.Rename works
+	// (avoids "invalid cross-device link" when /tmp is on a different filesystem).
+	tmpFile := execPath + ".update"
 	if runtime.GOOS == "windows" {
-		tmpFile += ".exe"
+		tmpFile = filepath.Join(os.TempDir(), u.project+"-update.exe")
 	}
 	if err := downloadFile(downloadURL, tmpFile); err != nil {
 		return fmt.Errorf("downloading binary: %w\n\nManual download: %s/%s/", err, u.channelURL(), ver)
