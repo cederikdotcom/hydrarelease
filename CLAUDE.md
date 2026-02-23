@@ -35,7 +35,7 @@ Releases go through GitHub Actions CI/CD. **Do not use `make deploy` for product
 3. GitHub Actions builds, creates a GitHub Release, and uploads binaries to the release server. The service auto-updates from `latest.json` on its next poll cycle.
 4. Verify: `hydrarelease verify --project hydrarelease`
 
-See [runbook.md](runbook.md) for the full release pipeline check procedure.
+See [docs/runbooks/runbook-release-pipeline.md](docs/runbooks/runbook-release-pipeline.md) for the full release pipeline check procedure.
 
 ## Project Structure
 
@@ -79,4 +79,4 @@ ssh root@46.225.120.7 "systemctl status hydrarelease"
 
 ## Runbooks
 
-See [runbook.md](runbook.md) for operational runbooks (release pipeline check, etc.).
+See [docs/runbooks/](docs/runbooks/) for operational runbooks (release pipeline check, etc.).

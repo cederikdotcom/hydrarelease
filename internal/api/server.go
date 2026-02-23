@@ -113,7 +113,7 @@ func (s *Server) Handler(publishToken string, startTime time.Time) http.Handler 
 
 	// Runbook
 	mux.HandleFunc("GET /api/v1/runbook", func(w http.ResponseWriter, r *http.Request) {
-		data, _ := docs.Files.ReadFile("runbook.md")
+		data, _ := docs.Files.ReadFile("runbooks/runbook.md")
 		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 		w.Write(data)
 	})
