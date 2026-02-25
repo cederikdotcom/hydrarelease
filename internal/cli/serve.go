@@ -1,9 +1,7 @@
 package cli
 
 import (
-	"crypto/tls"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
@@ -12,8 +10,8 @@ import (
 	"github.com/cederikdotcom/hydrarelease/internal/api"
 	"github.com/cederikdotcom/hydrarelease/internal/store"
 	"github.com/cederikdotcom/hydrarelease/pkg/updater"
+	"github.com/cederikdotcom/hydraserve"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
@@ -95,42 +93,17 @@ var serveCmd = &cobra.Command{
 
 		handler := srv.Handler(publishToken, startTime)
 
-		if serveDev {
-			listen := serveListen
-			if listen == "" {
-				listen = ":8080"
-			}
-			log.Printf("serving on %s (HTTP, dev mode)", listen)
-			return http.ListenAndServe(listen, handler)
+		listen := serveListen
+		if serveDev && listen == "" {
+			listen = ":8080"
 		}
 
-		// Plain HTTP behind reverse proxy.
-		if serveListen != "" {
-			log.Printf("serving on %s (behind reverse proxy, domain=%s)", serveListen, serveDomain)
-			return http.ListenAndServe(serveListen, handler)
-		}
-
-		m := &autocert.Manager{
-			Cache:      autocert.DirCache(serveCerts),
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(serveDomain),
-		}
-
-		httpSrv := &http.Server{
-			Addr:      ":443",
-			Handler:   handler,
-			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
-		}
-
-		go func() {
-			log.Printf("HTTP redirect server on :80")
-			log.Fatal(http.ListenAndServe(":80", m.HTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				http.Redirect(w, r, "https://"+r.Host+r.URL.String(), http.StatusMovedPermanently)
-			}))))
-		}()
-
-		log.Printf("serving on %s (HTTPS)", serveDomain)
-		return httpSrv.ListenAndServeTLS("", "")
+		return hydraserve.ListenAndServe(hydraserve.Config{
+			Handler: handler,
+			Domain:  serveDomain,
+			CertDir: serveCerts,
+			Listen:  listen,
+		})
 	},
 }
 
