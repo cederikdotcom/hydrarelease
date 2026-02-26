@@ -206,14 +206,14 @@ func init() {
 	releaseCmd.PersistentFlags().StringVar(&releaseProject, "project", "", "project name")
 	releaseCmd.PersistentFlags().BoolVar(&releaseJSON, "json", false, "output as JSON")
 
-	releasePromoteCmd.Flags().StringVar(&releaseEnv, "env", "", "environment (dev, staging, prod)")
+	releasePromoteCmd.Flags().StringVar(&releaseEnv, "env", "", "environment (dev, staging, production)")
 	releasePromoteCmd.Flags().IntVar(&releaseBuild, "build", 0, "build number to promote")
 	releasePromoteCmd.Flags().StringVar(&releaseVersion, "version", "", "version string")
 	releasePromoteCmd.Flags().StringVar(&releaseNotes, "notes", "", "release notes")
 
-	releaseRollbackCmd.Flags().StringVar(&releaseEnv, "env", "", "environment (dev, staging, prod)")
+	releaseRollbackCmd.Flags().StringVar(&releaseEnv, "env", "", "environment (dev, staging, production)")
 
-	releaseShowCmd.Flags().StringVar(&releaseEnv, "env", "", "environment (dev, staging, prod)")
+	releaseShowCmd.Flags().StringVar(&releaseEnv, "env", "", "environment (dev, staging, production)")
 
 	releaseCmd.AddCommand(releasePromoteCmd, releaseRollbackCmd, releaseListCmd, releaseShowCmd)
 	rootCmd.AddCommand(releaseCmd)

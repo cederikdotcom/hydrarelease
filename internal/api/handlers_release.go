@@ -26,9 +26,9 @@ type rollbackRequest struct {
 }
 
 var validEnvironments = map[string]bool{
-	"dev":     true,
-	"staging": true,
-	"prod":    true,
+	"dev":        true,
+	"staging":    true,
+	"production": true,
 }
 
 func (s *Server) handlePromoteRelease(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func (s *Server) handlePromoteRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validEnvironments[req.Environment] {
-		hydraapi.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid environment: %q (must be dev, staging, or prod)", req.Environment))
+		hydraapi.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid environment: %q (must be dev, staging, or production)", req.Environment))
 		return
 	}
 	if req.BuildNumber <= 0 {
@@ -75,7 +75,7 @@ func (s *Server) handlePromoteRelease(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update latest version tracking for updater polling.
-	s.SetLatest(rel.Project, envToChannel(rel.Environment), rel.Version, rel.BuildNumber)
+	s.SetLatest(rel.Project, rel.Environment, rel.Version, rel.BuildNumber)
 
 	// Emit SSE event.
 	s.Monitor.Emit(hydramonitor.Event{
@@ -124,7 +124,7 @@ func (s *Server) handleRollbackRelease(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update latest version tracking for updater polling.
-	s.SetLatest(rel.Project, envToChannel(rel.Environment), rel.Version, rel.BuildNumber)
+	s.SetLatest(rel.Project, rel.Environment, rel.Version, rel.BuildNumber)
 
 	// Emit SSE event.
 	s.Monitor.Emit(hydramonitor.Event{

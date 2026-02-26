@@ -89,6 +89,10 @@ var serveCmd = &cobra.Command{
 			MirrorToken: mirrorToken,
 		}
 
+		if err := releases.Migrate(); err != nil {
+			log.Printf("Warning: channel migration failed: %v", err)
+		}
+
 		srv.InitLatest()
 
 		handler := srv.Handler(publishToken, startTime)

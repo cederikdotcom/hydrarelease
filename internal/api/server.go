@@ -60,29 +60,12 @@ func (s *Server) GetLatest(project, channel string) (latestInfo, bool) {
 		return info, true
 	}
 
-	// Fall back to ReleaseStore with channel→env mapping.
-	env := channelToEnv(channel)
-	rel, err := s.Releases.Get(project, env)
+	// Fall back to ReleaseStore.
+	rel, err := s.Releases.Get(project, channel)
 	if err != nil {
 		return latestInfo{}, false
 	}
 	return latestInfo{Version: rel.Version, BuildNumber: rel.BuildNumber}, true
-}
-
-// channelToEnv maps URL channel names to ReleaseStore environment names.
-func channelToEnv(channel string) string {
-	if channel == "production" {
-		return "prod"
-	}
-	return channel
-}
-
-// envToChannel maps ReleaseStore environment names to URL channel names.
-func envToChannel(env string) string {
-	if env == "prod" {
-		return "production"
-	}
-	return env
 }
 
 // InitLatest pre-populates the latest map from all current releases in the store.
@@ -94,8 +77,7 @@ func (s *Server) InitLatest() {
 		return
 	}
 	for _, rel := range releases {
-		channel := envToChannel(rel.Environment)
-		s.SetLatest(rel.Project, channel, rel.Version, rel.BuildNumber)
+		s.SetLatest(rel.Project, rel.Environment, rel.Version, rel.BuildNumber)
 	}
 	if len(releases) > 0 {
 		log.Printf("Pre-populated latest map with %d releases", len(releases))

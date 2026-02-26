@@ -169,10 +169,9 @@ func (s *Server) handleFinalize(w http.ResponseWriter, r *http.Request) {
 
 	// Persist to ReleaseStore so latest survives restarts.
 	cleanVersion := strings.TrimPrefix(version, "v")
-	env := channelToEnv(channel)
 	_, err = s.Releases.Promote(store.PromoteRequest{
 		Project:     project,
-		Environment: env,
+		Environment: channel,
 		Version:     cleanVersion,
 		ReleasedBy:  "publish-api",
 	})

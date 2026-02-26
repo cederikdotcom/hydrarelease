@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -308,6 +309,85 @@ func (s *ReleaseStore) ListCurrentReleases() ([]Release, error) {
 		}
 	}
 	return result, nil
+}
+
+// Migrate renames any "prod" environment directories and entries to "production".
+// This is a one-time migration to normalize the channel naming.
+func (s *ReleaseStore) Migrate() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	releasesDir := filepath.Join(s.dataDir, "releases")
+	projects, err := os.ReadDir(releasesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("reading releases directory: %w", err)
+	}
+
+	migrated := 0
+
+	for _, p := range projects {
+		if !p.IsDir() {
+			continue
+		}
+		prodDir := filepath.Join(releasesDir, p.Name(), "prod")
+		productionDir := filepath.Join(releasesDir, p.Name(), "production")
+
+		if _, err := os.Stat(prodDir); os.IsNotExist(err) {
+			continue
+		}
+
+		// If production/ already exists, skip to avoid conflicts.
+		if _, err := os.Stat(productionDir); err == nil {
+			log.Printf("migrate: skipping %s/prod (production/ already exists)", p.Name())
+			continue
+		}
+
+		// Rename the directory.
+		if err := os.Rename(prodDir, productionDir); err != nil {
+			return fmt.Errorf("renaming %s/prod to production: %w", p.Name(), err)
+		}
+
+		// Update environment field in release.yaml.
+		rel, err := s.loadRelease(p.Name(), "production")
+		if err == nil && rel != nil && rel.Environment == "prod" {
+			rel.Environment = "production"
+			if err := s.saveRelease(rel); err != nil {
+				return fmt.Errorf("updating release.yaml for %s: %w", p.Name(), err)
+			}
+		}
+
+		migrated++
+		log.Printf("migrate: renamed %s/prod -> production", p.Name())
+	}
+
+	// Update releases.yaml index entries.
+	if migrated > 0 {
+		idx, err := s.loadIndex()
+		if err != nil {
+			return fmt.Errorf("loading index for migration: %w", err)
+		}
+		updated := 0
+		for i := range idx.Releases {
+			if idx.Releases[i].Environment == "prod" {
+				idx.Releases[i].Environment = "production"
+				updated++
+			}
+		}
+		if updated > 0 {
+			if err := s.saveIndex(idx); err != nil {
+				return fmt.Errorf("saving migrated index: %w", err)
+			}
+			log.Printf("migrate: updated %d index entries from prod to production", updated)
+		}
+	}
+
+	if migrated > 0 {
+		log.Printf("migrate: completed (%d projects migrated)", migrated)
+	}
+	return nil
 }
 
 // Stats returns the total number of release promotions.
