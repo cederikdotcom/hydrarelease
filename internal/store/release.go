@@ -339,13 +339,14 @@ func (s *ReleaseStore) Migrate() error {
 			continue
 		}
 
-		// If production/ already exists, skip to avoid conflicts.
+		// If production/ already exists, replace it with prod/ (which has newer CI data).
 		if _, err := os.Stat(productionDir); err == nil {
-			log.Printf("migrate: skipping %s/prod (production/ already exists)", p.Name())
-			continue
+			if err := os.RemoveAll(productionDir); err != nil {
+				return fmt.Errorf("removing old %s/production: %w", p.Name(), err)
+			}
 		}
 
-		// Rename the directory.
+		// Rename prod/ to production/.
 		if err := os.Rename(prodDir, productionDir); err != nil {
 			return fmt.Errorf("renaming %s/prod to production: %w", p.Name(), err)
 		}
@@ -363,25 +364,23 @@ func (s *ReleaseStore) Migrate() error {
 		log.Printf("migrate: renamed %s/prod -> production", p.Name())
 	}
 
-	// Update releases.yaml index entries.
-	if migrated > 0 {
-		idx, err := s.loadIndex()
-		if err != nil {
-			return fmt.Errorf("loading index for migration: %w", err)
+	// Always update releases.yaml index entries.
+	idx, err := s.loadIndex()
+	if err != nil {
+		return fmt.Errorf("loading index for migration: %w", err)
+	}
+	updated := 0
+	for i := range idx.Releases {
+		if idx.Releases[i].Environment == "prod" {
+			idx.Releases[i].Environment = "production"
+			updated++
 		}
-		updated := 0
-		for i := range idx.Releases {
-			if idx.Releases[i].Environment == "prod" {
-				idx.Releases[i].Environment = "production"
-				updated++
-			}
+	}
+	if updated > 0 {
+		if err := s.saveIndex(idx); err != nil {
+			return fmt.Errorf("saving migrated index: %w", err)
 		}
-		if updated > 0 {
-			if err := s.saveIndex(idx); err != nil {
-				return fmt.Errorf("saving migrated index: %w", err)
-			}
-			log.Printf("migrate: updated %d index entries from prod to production", updated)
-		}
+		log.Printf("migrate: updated %d index entries from prod to production", updated)
 	}
 
 	if migrated > 0 {
