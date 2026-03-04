@@ -29,8 +29,10 @@ type Server struct {
 	Auth        *hydraauth.Auth
 	Monitor     *hydramonitor.Monitor
 	Version     string
-	MirrorURL   string // hydramirror URL for file storage and redirects
-	MirrorToken string // bearer token for hydramirror
+	MirrorURL         string // hydramirror URL for file storage and redirects
+	MirrorToken       string // bearer token for hydramirror
+	IssueTrackerURL   string // hydraissue URL for issue resolution
+	IssueTrackerToken string // bearer token for hydraissue
 
 	latestMu sync.RWMutex
 	latest   map[string]latestInfo // key: "project/channel"

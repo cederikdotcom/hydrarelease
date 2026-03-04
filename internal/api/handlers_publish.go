@@ -182,6 +182,12 @@ func (s *Server) handleFinalize(w http.ResponseWriter, r *http.Request) {
 	// Update latest version tracking.
 	s.SetLatest(project, channel, cleanVersion, 0)
 
+	// Resolve referenced issues if any were passed.
+	if issuesParam := r.URL.Query().Get("issues"); issuesParam != "" {
+		issueIDs := strings.Split(issuesParam, ",")
+		s.resolveIssues(issueIDs, cleanVersion, project)
+	}
+
 	log.Printf("publish: finalized %s/%s/%s (%d files)", project, channel, version, len(files))
 	hydraapi.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": cleanVersion, "channel": channel})
 }

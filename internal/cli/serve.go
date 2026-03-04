@@ -15,15 +15,17 @@ import (
 )
 
 var (
-	serveDataDir      string
-	serveDomain       string
-	serveCerts        string
-	serveDev          bool
-	serveListen       string
-	servePublishToken string
-	serveAuthToken    string
-	serveMirrorURL    string
-	serveMirrorToken  string
+	serveDataDir         string
+	serveDomain          string
+	serveCerts           string
+	serveDev             bool
+	serveListen          string
+	servePublishToken    string
+	serveAuthToken       string
+	serveMirrorURL       string
+	serveMirrorToken     string
+	serveIssueTrackerURL   string
+	serveIssueTrackerToken string
 )
 
 var serveCmd = &cobra.Command{
@@ -79,14 +81,25 @@ var serveCmd = &cobra.Command{
 			log.Printf("Warning: no mirror URL configured; publish and file serving will not work")
 		}
 
+		issueTrackerURL := serveIssueTrackerURL
+		if issueTrackerURL == "" {
+			issueTrackerURL = os.Getenv("HYDRARELEASE_ISSUE_TRACKER_URL")
+		}
+		issueTrackerToken := serveIssueTrackerToken
+		if issueTrackerToken == "" {
+			issueTrackerToken = os.Getenv("HYDRARELEASE_ISSUE_TRACKER_TOKEN")
+		}
+
 		srv := &api.Server{
-			Builds:      builds,
-			Releases:    releases,
-			Auth:        auth,
-			Monitor:     monitor,
-			Version:     version,
-			MirrorURL:   mirrorURL,
-			MirrorToken: mirrorToken,
+			Builds:            builds,
+			Releases:          releases,
+			Auth:              auth,
+			Monitor:           monitor,
+			Version:           version,
+			MirrorURL:         mirrorURL,
+			MirrorToken:       mirrorToken,
+			IssueTrackerURL:   issueTrackerURL,
+			IssueTrackerToken: issueTrackerToken,
 		}
 
 		if err := releases.Migrate(); err != nil {
@@ -121,6 +134,8 @@ func init() {
 	serveCmd.Flags().StringVar(&serveAuthToken, "auth-token", "", "bearer token for build/release API and SSE (or HYDRARELEASE_AUTH_TOKEN env)")
 	serveCmd.Flags().StringVar(&serveMirrorURL, "mirror-url", "", "hydramirror URL for file storage (or HYDRARELEASE_MIRROR_URL env)")
 	serveCmd.Flags().StringVar(&serveMirrorToken, "mirror-token", "", "bearer token for hydramirror (or HYDRARELEASE_MIRROR_TOKEN env)")
+	serveCmd.Flags().StringVar(&serveIssueTrackerURL, "issue-tracker-url", "", "hydraissue URL for issue resolution (or HYDRARELEASE_ISSUE_TRACKER_URL env)")
+	serveCmd.Flags().StringVar(&serveIssueTrackerToken, "issue-tracker-token", "", "bearer token for hydraissue (or HYDRARELEASE_ISSUE_TRACKER_TOKEN env)")
 
 	rootCmd.AddCommand(serveCmd)
 }
