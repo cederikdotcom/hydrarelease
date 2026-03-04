@@ -49,6 +49,8 @@ HydraRelease pushes files to hydramirror on two occasions:
 |----------|-------------|
 | `HYDRARELEASE_MIRROR_URL` | hydramirror base URL (e.g. `https://mirror-a.experiencenet.com`) |
 | `HYDRARELEASE_MIRROR_TOKEN` | Bearer token for hydramirror write operations |
+| `HYDRARELEASE_ISSUE_TRACKER_URL` | hydraissue base URL (e.g. `https://issues.experiencenet.com`) |
+| `HYDRARELEASE_ISSUE_TRACKER_TOKEN` | Bearer token for hydraissue issue resolution |
 
 These are set in `/etc/hydrarelease.env`. Restart the service after changes:
 ```bash
